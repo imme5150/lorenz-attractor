@@ -44,7 +44,7 @@ requirejs(["Quaternion", "Input", "InputGroup"], function (Quaternion, Input, In
           vary:
             {
               selector: "#ranVary",
-              init: 0,
+              init: 20,
               min: 0,
               max: 50,
               slider: true,
@@ -53,7 +53,7 @@ requirejs(["Quaternion", "Input", "InputGroup"], function (Quaternion, Input, In
           spread:
             {
               selector: "#ranSpread",
-              init: 0,
+              init: 0.5,
               min: 0,
               max: 10,
               slider: true,
@@ -74,8 +74,8 @@ requirejs(["Quaternion", "Input", "InputGroup"], function (Quaternion, Input, In
       var updateInput = new Input(
             {
               selector: "#updateInterval",
-              init: 50,
-              min: 20,
+              init: 30,
+              min: 15,
               max: 1000,
               slider: false
             });
@@ -83,17 +83,17 @@ requirejs(["Quaternion", "Input", "InputGroup"], function (Quaternion, Input, In
       var seriesInput = new Input(
             {
               selector: "#numSeries",
-              init: 1,
+              init: 10,
               min: 1,
-              max: 20,
+              max: 2000,
               slider: false
             });
 
       var seriesLenInput = new Input(
           {
             selector: "#seriesLen",
-            init: 1000,
-            min: 1,
+            init: 100,
+            min: 2,
             max: 2000,
             slider: false
           });
@@ -103,7 +103,7 @@ requirejs(["Quaternion", "Input", "InputGroup"], function (Quaternion, Input, In
       // maxiumum number of points in the series.
       var totalPoints = 1000;
       // length of the axes on the graph.
-      var axisLength = 3;
+      var axisLength = 0;
       // true when running.
       var running = true;
       // true during mouse drag.
@@ -139,11 +139,13 @@ requirejs(["Quaternion", "Input", "InputGroup"], function (Quaternion, Input, In
       // parameter values to use in equation.
       var parmVals = {};
       // the number of data series.
-      var numSeries = 1;
+      var numSeries = seriesInput.getValue();
 
       // default values of parameters etc.
       var dt = 0.01;
       var initialPoints = [[]];
+      var seriesColors = [];
+      var rotV = [0, 0, 0];
       var iters = 5; // number of iterations per refresh
       var updateInterval = 50; // time in ms per refresh
       var plot; // object to store the flot plot in.
@@ -161,6 +163,7 @@ requirejs(["Quaternion", "Input", "InputGroup"], function (Quaternion, Input, In
             2 * Math.random() * vary - vary;
         }
         for (var series = 0; series < numSeries; series++) {
+          seriesColors[series] = 'hsla('+Math.round(Math.random()*360)+', '+Math.round(Math.random()*65+35)+'%, '+Math.round(Math.random()*30+40)+'%, '+(Math.random()/3+0.5)+')';
           if (random && running || initialPoints[series] === undefined) {
             initialPoints[series] = [];
             for (var axis = 0; axis < 3; axis++) {
@@ -201,8 +204,8 @@ requirejs(["Quaternion", "Input", "InputGroup"], function (Quaternion, Input, In
       function getSeries(series, axes) {
         // return a data series as an object with formatting parameters.
         return {
-          color: "rgba(255, 128, 32, 0.5)",
-          lines: {lineWidth: 1},
+          color: seriesColors[series],
+          lines: {lineWidth: 2},
           data: project(data[series], axes)
         }
       }
@@ -238,8 +241,10 @@ requirejs(["Quaternion", "Input", "InputGroup"], function (Quaternion, Input, In
         for (var series = 0; series < numSeries; series++) {
           ret.push(getSeries(series, axes));
         }
-        for (var axis = 0; axis < 3; axis++) {
-          ret.push(getAxisSeries(axis));
+        if (axisLength > 0) {
+          for (var axis = 0; axis < 3; axis++) {
+            ret.push(getAxisSeries(axis));
+          }
         }
         return ret;
       }
@@ -295,8 +300,8 @@ requirejs(["Quaternion", "Input", "InputGroup"], function (Quaternion, Input, In
         var yscale = xscale * $("#chart").height() / $("#chart").width();
         var options = {
             series: { shadowSize: 0 }, // drawing is faster without shadows
-            yaxis: { min: -yscale, max: yscale },
-            xaxis: { min: -xscale, max: xscale }
+            yaxis: { min: -yscale, max: yscale, show: false },
+            xaxis: { min: -xscale, max: xscale, show: false }
         };
         plot = $.plot($("#chart"), getAllSeries(axes), options);
       }
@@ -381,6 +386,7 @@ requirejs(["Quaternion", "Input", "InputGroup"], function (Quaternion, Input, In
 
       // get an initial data point.
       getInitialPoints(true);
+      addAllDataPoints();
      
       // make the initial plot.
       makePlot();
@@ -442,6 +448,17 @@ requirejs(["Quaternion", "Input", "InputGroup"], function (Quaternion, Input, In
             // rotate the axes.
             axes[i] = rotatePoint(origAxes[i], curRot);
           }
+        } else if (running) {
+          if (Math.random() > 0.01) {
+            rotV[Math.round(Math.random()*3)] += Math.random()*0.2 - 0.1;
+          }
+          dragRot.setAxisAngle(rotV, 0.01);
+          curRot = dragRot.multiply(rotation);
+          for (var i = 0; i < 3; i++) {
+            // rotate the axes.
+            axes[i] = rotatePoint(origAxes[i], curRot);
+          }
+          rotation = curRot;
         }
         plot.setData(getAllSeries(axes));
         plot.draw();
