@@ -448,6 +448,7 @@ requirejs(["Quaternion", "Input", "InputGroup"], function (Quaternion, Input, In
             // rotate the axes.
             axes[i] = rotatePoint(origAxes[i], curRot);
           }
+          rotV = axis; // reset the rotation velocity when dragging
         } else if (running) {
           if (Math.random() > 0.01) {
             rotV[Math.round(Math.random()*3)] += Math.random()*0.2 - 0.1;
